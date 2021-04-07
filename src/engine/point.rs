@@ -33,4 +33,14 @@ impl Point {
     pub fn dot_product(&self, point: Point) -> f32 {
         self.x * point.x + self.y * point.y
     }
+
+    pub fn rotate_around_origin(&self, theta: f32) -> Point {
+        let cos = theta.cos();
+        let sin = theta.sin();
+
+        Point {
+            x: self.x * cos - self.y * sin,
+            y: self.y * cos + self.x * sin,
+        }
+    }
 }
