@@ -43,8 +43,8 @@ impl Point {
         let safe_sin = if (sin).abs() <= 0.01 { 0.0 } else { sin };
 
         Point {
-            x: self.x * safe_cos + self.y * safe_sin,
-            y: -self.x * safe_sin + self.y * safe_cos,
+            x: self.x * safe_cos - self.y * safe_sin,
+            y: self.x * safe_sin + self.y * safe_cos,
         }
     }
 }
