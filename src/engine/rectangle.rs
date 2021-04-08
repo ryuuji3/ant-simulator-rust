@@ -1,6 +1,16 @@
 use super::Boundary;
 use crate::{ Point };
 
+// Here's an example of a rectangle with rotation 0 
+//
+//    top-left────────────────top-right
+//           |                |
+//           |                |    \
+//           |     origin     |     | rotation
+//           |                |    \/
+//           |                |
+//  bottom-left────────────────bottom-right
+// 
 #[derive(Clone, Copy)]
 pub struct Rectangle {
     // center of rectangle
@@ -10,6 +20,11 @@ pub struct Rectangle {
     pub height: f32,
 
     pub rotation: f32,
+
+    top_right: Point,
+    bottom_right: Point,
+    bottom_left: Point,
+    top_left: Point,
 }
 
 impl Rectangle {
@@ -19,6 +34,11 @@ impl Rectangle {
             width,
             height,
             rotation,
+
+            top_right: Point::create_point(x + width / 2.0, y - height / 2.0),
+            bottom_right: Point::create_point(x + width / 2.0, y + height / 2.0),
+            bottom_left: Point::create_point(x - width / 2.0, y + height / 2.0),
+            top_left: Point::create_point(x - width / 2.0, y - height / 2.0),
         }
     }
 
@@ -29,6 +49,31 @@ impl Rectangle {
     pub fn get_y(&self) -> f32 {
         self.origin.y
     }
+
+    pub fn get_vertexes(&self) -> Vec<&Point> {
+        Vec::from([
+            &self.top_right,
+            &self.bottom_right,
+            &self.bottom_left,
+            &self.top_left,
+        ])
+    }
+
+    pub fn rotate(&self, rotation: f32) -> Rectangle {
+        let new_rotation = self.rotation + rotation;
+
+        Rectangle {
+            origin: self.origin,
+            width: self.width,
+            height: self.height,
+            rotation: new_rotation,
+
+            top_right: self.top_right.rotate_around_origin(new_rotation),
+            bottom_right: self.bottom_right.rotate_around_origin(new_rotation),
+            bottom_left: self.bottom_left.rotate_around_origin(new_rotation),
+            top_left: self.top_left.rotate_around_origin(new_rotation),
+        }
+    }
 }
 
 impl Boundary<Rectangle> for Rectangle {
@@ -37,16 +82,89 @@ impl Boundary<Rectangle> for Rectangle {
         let rotated_point = point.rotate_around_origin(-self.rotation);
 
         // can now apply normal logic to rotated point
-        let left_x = self.get_x() - self.width / 2.0;
-        let right_x = self.get_x() + self.width / 2.0;
-        let top_y = self.get_y() - self.height / 2.0;
-        let bottom_y = self.get_y() + self.height / 2.0;
-
-        left_x <= rotated_point.x && rotated_point.x <= right_x
-        && top_y <= rotated_point.y && rotated_point.y <= bottom_y
+        self.top_left.x <= rotated_point.x && rotated_point.x <= self.top_right.x
+        && self.top_left.y <= rotated_point.y && rotated_point.y <= self.bottom_left.y
     }
 
-    fn intersects(range: &Rectangle) -> bool {
-        true // TODO: Does this rectangle intersect another rectangle?
+    fn intersects(&self, range: &Rectangle) -> bool {
+        let rotated_range = range.rotate(-self.rotation);
+
+        rotated_range
+            .get_vertexes()
+            .iter()
+            .map(|corner| self.contains(corner))
+            .any(|has_intersection| has_intersection == true)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rect_contains_point() {
+        let basic_rectangle = Rectangle::new(0.0,0.0,100.0,100.0,0.0);
+
+        // inside
+        assert!(basic_rectangle.contains(&Point::create_point(0.0, 0.0))); 
+        assert!(basic_rectangle.contains(&Point::create_point(20.7, 30.4)));
+        assert!(basic_rectangle.contains(&Point::create_point(-25.2, 40.9)));
+
+        // edges
+        assert!(basic_rectangle.contains(&Point::create_point(50.0, 0.0))); // right center
+        assert!(basic_rectangle.contains(&Point::create_point(50.0, 50.0))); // right bottom
+        assert!(basic_rectangle.contains(&Point::create_point(0.0, 50.0))); // right center
+        assert!(basic_rectangle.contains(&Point::create_point(-50.0, -50.0))); // bottom left
+        assert!(basic_rectangle.contains(&Point::create_point(-50.0, 0.0))); // bottom center
+        assert!(basic_rectangle.contains(&Point::create_point(-50.0, 50.0))); // top left
+        assert!(basic_rectangle.contains(&Point::create_point(0.0, 50.0))); // top center
+        assert!(basic_rectangle.contains(&Point::create_point(50.0, -50.0))); // top right
+
+        // outside
+        assert!(!basic_rectangle.contains(&Point::create_point(100.0, 50.0))); 
+        assert!(!basic_rectangle.contains(&Point::create_point(-100.0, 50.0))); 
+        assert!(!basic_rectangle.contains(&Point::create_point(50.0, -100.0))); 
+        assert!(!basic_rectangle.contains(&Point::create_point(50.0, 100.0))); 
+    }
+
+    #[test]
+    fn rotated_rect_contains_point() {
+        // technically rotated, but because the rectangle is a square should be virtually the same as if it was 0 degrees
+        let rotated_rectangle = Rectangle::new(0.0,0.0,100.0,100.0,45.0);
+
+        // inside
+        assert!(rotated_rectangle.contains(&Point::create_point(0.0, 0.0))); 
+        assert!(rotated_rectangle.contains(&Point::create_point(20.7, 30.4)));
+        assert!(rotated_rectangle.contains(&Point::create_point(-25.2, 40.9)));
+
+        // edges
+        assert!(rotated_rectangle.contains(&Point::create_point(50.0, 0.0))); // right center
+        assert!(rotated_rectangle.contains(&Point::create_point(25.0, 25.0))); // bottom-right center
+        assert!(rotated_rectangle.contains(&Point::create_point(0.0, 50.0))); // right center
+        assert!(rotated_rectangle.contains(&Point::create_point(-25.0, -25.0))); // bottom left
+        assert!(rotated_rectangle.contains(&Point::create_point(-50.0, 0.0))); // bottom center
+        assert!(rotated_rectangle.contains(&Point::create_point(-25.0, 25.0))); // top left
+        assert!(rotated_rectangle.contains(&Point::create_point(0.0, 50.0))); // top center
+        assert!(rotated_rectangle.contains(&Point::create_point(25.0, -25.0))); // top right
+
+        // outside
+        assert!(!rotated_rectangle.contains(&Point::create_point(100.0, 50.0))); 
+        assert!(!rotated_rectangle.contains(&Point::create_point(-100.0, 50.0))); 
+        assert!(!rotated_rectangle.contains(&Point::create_point(50.0, -100.0))); 
+        assert!(!rotated_rectangle.contains(&Point::create_point(50.0, 100.0))); 
+    }
+
+    #[test]
+    pub fn rect_intersects() {
+        let main_rectangle = Rectangle::new(0.0, 0.0, 100.0, 100.0, 0.0);
+        
+        let overlapping_rectangle = Rectangle::new(25.0, 25.0, 100.0, 100.0, 0.0);
+        let edge_overlapping_rectangle = Rectangle::new(100.0, 100.0, 100.0, 100.0, 0.0);
+        let not_overlapping_rectangle = Rectangle::new(101.0, 101.0, 100.0, 100.0, 0.0);
+
+        assert!(main_rectangle.intersects(&overlapping_rectangle));
+        assert!(edge_overlapping_rectangle.intersects(&overlapping_rectangle));
+
+        assert!(!main_rectangle.intersects(&not_overlapping_rectangle));
     }
 }

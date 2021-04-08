@@ -4,13 +4,14 @@ mod rectangle;
 mod quadtree;
 mod entity;
 mod point;
-// traits
-mod boundary;
-
-use boundary::Boundary;
 
 pub use world::World;
 pub use entity::Entity;
 // shapes
+pub use boundary::Boundary; // allow for custom implementations
+
 pub use point::Point;
 pub use rectangle::Rectangle;
+
+// traits
+mod boundary;
