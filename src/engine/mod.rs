@@ -2,11 +2,11 @@
 mod world;
 mod rectangle;
 mod quadtree;
-mod entity;
 mod point;
 
+use quadtree::QuadTree;
+
 pub use world::World;
-pub use entity::Entity;
 // shapes
 pub use boundary::Boundary; // allow for custom implementations
 

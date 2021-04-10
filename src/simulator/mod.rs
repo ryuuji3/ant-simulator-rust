@@ -10,6 +10,8 @@ use colony::Colony;
 use food::Food;
 use pheromone::Pheromone;
 
+use super::engine::{ World };
+
 // expose engine constructs to simulator
 use crate::Point;
 
