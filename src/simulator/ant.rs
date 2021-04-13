@@ -1,6 +1,5 @@
 use rand::{ thread_rng, Rng };
-
-use super::{ Food, Point };
+use super::{ Food, Point, };
 
 #[derive(Clone)]
 pub struct Ant {
@@ -18,6 +17,8 @@ impl Ant {
         }
     }
 }
+
+
 
 fn generate_random_angle() -> f32 {
     thread_rng().gen_range(0.0..360.0)
