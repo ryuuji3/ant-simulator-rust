@@ -1,4 +1,4 @@
-use super::{ Point };
+use super::{Point, Geometry};
 
 // Here's an example of a rectangle with rotation 0 
 //
@@ -10,7 +10,7 @@ use super::{ Point };
 //           |                |
 //  bottom-left────────────────bottom-right
 // 
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Rectangle {
     // center of rectangle
     pub origin: Point,
@@ -75,14 +75,35 @@ impl Rectangle {
     }
 }
 
+impl Geometry<Rectangle> for Rectangle {
+    fn contains(&self, point: &Point) -> bool {
+        //factor out the rotation by applying same rotation in reverse to point 
+        let rotated_point = point.rotate_around_origin(-self.rotation);
+
+        // can now apply normal logic to rotated point
+        self.top_left.x <= rotated_point.x && rotated_point.x <= self.top_right.x
+        && self.top_left.y <= rotated_point.y && rotated_point.y <= self.bottom_left.y
+    }
+
+    fn intersects(&self, range: &Rectangle) -> bool {
+        let rotated_range = range.rotate(-self.rotation);
+
+        rotated_range
+            .get_vertexes()
+            .iter()
+            .map(|corner| self.contains(corner))
+            .any(|has_intersection| has_intersection == true)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::Shape;
+    use super::super::Geometry;
 
     #[test]
     fn rect_contains_point() {
-        let basic_rectangle = Shape::Rectangle(Rectangle::new(0.0,0.0,100.0,100.0,0.0));
+        let basic_rectangle = Rectangle::new(0.0,0.0,100.0,100.0,0.0);
 
         // inside
         assert!(basic_rectangle.contains(&Point::create_point(0.0, 0.0))); 
@@ -109,7 +130,7 @@ mod tests {
     #[test]
     fn rotated_rect_contains_point() {
         // technically rotated, but because the rectangle is a square should be virtually the same as if it was 0 degrees
-        let rotated_rectangle = Shape::Rectangle(Rectangle::new(0.0,0.0,100.0,100.0,45.0));
+        let rotated_rectangle = Rectangle::new(0.0,0.0,100.0,100.0,45.0);
 
         // inside
         assert!(rotated_rectangle.contains(&Point::create_point(0.0, 0.0))); 
@@ -135,11 +156,11 @@ mod tests {
 
     #[test]
     pub fn rect_intersects() {
-        let main_rectangle = Shape::Rectangle(Rectangle::new(0.0, 0.0, 100.0, 100.0, 0.0));
+        let main_rectangle = Rectangle::new(0.0, 0.0, 100.0, 100.0, 0.0);
         
-        let overlapping_rectangle = Shape::Rectangle(Rectangle::new(25.0, 25.0, 100.0, 100.0, 0.0));
-        let edge_overlapping_rectangle = Shape::Rectangle(Rectangle::new(100.0, 100.0, 100.0, 100.0, 0.0));
-        let not_overlapping_rectangle = Shape::Rectangle(Rectangle::new(101.0, 101.0, 100.0, 100.0, 0.0));
+        let overlapping_rectangle = Rectangle::new(25.0, 25.0, 100.0, 100.0, 0.0);
+        let edge_overlapping_rectangle = Rectangle::new(100.0, 100.0, 100.0, 100.0, 0.0);
+        let not_overlapping_rectangle = Rectangle::new(101.0, 101.0, 100.0, 100.0, 0.0);
 
         assert!(main_rectangle.intersects(&overlapping_rectangle));
         assert!(edge_overlapping_rectangle.intersects(&overlapping_rectangle));

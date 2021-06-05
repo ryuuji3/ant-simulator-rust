@@ -1,19 +1,5 @@
-use super::{ Entity, Rectangle };
+use super::{ Rectangle, Container, QuadTree };
 
-pub struct World<T> {
+pub struct World {
     bounds: Rectangle,
-    entities: Vec<Box<dyn Entity<T>>>,
-}
-
-impl<T> World<T> {
-    pub fn new(bounds: Rectangle) -> World<T> {
-        World {
-            bounds,
-            entities: vec![],
-        }
-    }
-
-    pub fn tick(&mut self) {
-        todo!()
-    }
 }

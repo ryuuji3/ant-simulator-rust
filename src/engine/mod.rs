@@ -1,13 +1,10 @@
-// structs
-mod world;
-mod quadtree;
-mod entity;
 mod container;
+mod world;
+mod entity;
 mod geometry;
 
-pub use quadtree::QuadTree;
+use container::*;
+
+pub use geometry::{ Point, Rectangle };
 pub use world::World;
 pub use entity::Entity;
-pub use container::Container;
-// shapes
-pub use geometry::*;

@@ -1,16 +1,16 @@
-use super::{ Container, Entity, Rectangle, Shape};
+use super::{ Container, Rectangle, Geometry, Entity };
 
 #[derive(Debug)]
-pub struct QuadTree<T> {
+pub struct QuadTree {
     bounds: Rectangle,
     capacity: usize,
-    entities: Vec<Box<dyn Entity<T>>>,
+    entities: Vec<Entity>,
 
-    quadrants: Option<Vec<QuadTree<T>>>,
+    quadrants: Option<Vec<QuadTree>>,
 }
 
-impl<T> QuadTree<T> {
-    pub fn new(bounds: Rectangle, capacity: usize) -> QuadTree<T> {
+impl QuadTree {
+    pub fn new(bounds: Rectangle, capacity: usize) -> QuadTree {
         QuadTree {
             bounds,
             capacity,
@@ -35,7 +35,7 @@ impl<T> QuadTree<T> {
             )
             .collect();
 
-        let quadrants: Vec<QuadTree<T>> = bounds
+        let quadrants = bounds
                 .iter()
                 .map(|&bounds| QuadTree::new(bounds, self.capacity))
                 .collect();
@@ -44,20 +44,20 @@ impl<T> QuadTree<T> {
     }
 }
 
-impl<T> Container<T> for QuadTree<T> {
-    fn query(&self, bounds: &Shape) -> Vec<&Box<dyn Entity<T>>> {
+impl Container for QuadTree {
+    fn query(&self, bounds: &Rectangle) -> Vec<&Entity> {
         let mut found = vec![];
 
-        if !bounds.intersects(&Shape::Rectangle(self.bounds)) {
+        if !bounds.intersects(&self.bounds) {
             return found;
         } else {
             self.entities
                 .iter()
-                .filter(|entity| bounds.contains(&entity.get_position()))
+                .filter(|&entity| bounds.contains(&entity.position))
                 .for_each(|entity| found.push(entity));
         }
 
-        match & self.quadrants {
+        match &self.quadrants {
             Some(quadrants) =>
                 quadrants
                 .iter()
@@ -69,8 +69,8 @@ impl<T> Container<T> for QuadTree<T> {
         return found;
     }
 
-    fn insert(&mut self, entity: Box<dyn Entity<T>>) {
-        if !Shape::Rectangle(self.bounds).contains(&entity.get_position()) {
+    fn insert(&mut self, entity: Entity) {
+        if !self.bounds.contains(&entity.position) {
             return;
         }
 
@@ -87,7 +87,7 @@ impl<T> Container<T> for QuadTree<T> {
             Some(quadrants) => 
                 quadrants
                 .iter_mut()
-                .find(|quadrant| Shape::Rectangle(quadrant.bounds).contains(&entity.get_position()))
+                .find(|quadrant| quadrant.bounds.contains(&entity.position))
                 .map(|quadrant| quadrant.insert(entity)),
             _ => unreachable!("Quadrants not initialized!"),
         };
@@ -96,56 +96,36 @@ impl<T> Container<T> for QuadTree<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::engine::Point;
-
     use super::*;
-
-    #[derive(Clone, Debug, PartialEq, PartialOrd)]
-    struct TestEntity {
-        position: Point,
-    }
-
-    impl Entity<TestEntity> for TestEntity {
-        fn get_position(&self) -> Point {
-            self.position
-        }
-
-        fn tick(&mut self, tree: &dyn Container<TestEntity>) {
-            todo!()
-        }
-    } 
+    use super::super::*;
 
     #[test]
     fn insert_items() {
         let bounds = Rectangle::new(0.0, 0.0, 200.0, 200.0, 0.0);
-        let mut tree: QuadTree<TestEntity> = QuadTree::new(bounds, 4);
+        let mut tree: QuadTree = QuadTree::new(bounds, 4);
 
-        let inside_entites: Vec<TestEntity> = vec![
+        let inside_entites: Vec<Entity> = vec![
             Point { x: 0.0, y: 0.0, },
             Point { x: 25.3, y: 40.9 },
             Point { x: -54.2, y: -90.5 },
             Point { x: 100.0, y: 100.0 },
             Point { x: -100.0, y: -100.0 },
-        ].iter().map(|&position| TestEntity { position }).collect();
+        ].iter().map(|&point| Entity::new(point)).collect();
 
-        let outside_entities: Vec<TestEntity> = vec![
+        let outside_entities: Vec<Entity> = vec![
             Point { x: 200.0, y: 200.0 },
-        ].iter().map(|&position| TestEntity { position }).collect();
+        ].iter().map(|&point| Entity::new(point)).collect();
 
         inside_entites
             .iter()
-            .for_each(|entity| tree.insert(Box::new(entity.clone())));
+            .for_each(|&entity| tree.insert(entity));
 
         outside_entities
             .iter()
-            .for_each(|entity| tree.insert(Box::new(entity.clone())));
+            .for_each(|&entity| tree.insert(entity));
 
-        let result_entity_references = tree.query(&Shape::Rectangle(bounds));
-        // TODO: Sort by points
+        let actual_results: Vec<Entity> = tree.query(&bounds).iter().map(|&&entity| entity).collect(); // TODO: Sort by points
 
-        let expected_results: Vec<Point> = inside_entites.iter().map(|entity| entity.get_position()).collect();
-        let actual_results: Vec<Point> = result_entity_references.iter().map(|entity| entity.get_position()).collect();
-
-        assert_eq!(actual_results, expected_results);
+        assert_eq!(actual_results, inside_entites);
     }
 }

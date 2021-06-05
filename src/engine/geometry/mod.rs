@@ -1,7 +1,7 @@
 mod point;
 mod rectangle;
-mod shape;
+mod geometry;
 
 pub use point::Point;
 pub use rectangle::Rectangle;
-pub use shape::Shape;
+pub use geometry::Geometry;

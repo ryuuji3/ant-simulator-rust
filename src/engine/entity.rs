@@ -1,8 +1,17 @@
-use std::fmt::Debug;
-use super::{Point, Container};
+use uuid::Uuid;
+use super::Point;
 
-pub trait Entity<T>: Debug {
-    fn get_position(&self) -> Point;
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Entity {
+    pub id: Uuid,
+    pub position: Point,
+}
 
-    fn tick(&mut self, tree: &dyn Container<T>);
+impl Entity {
+    pub fn new(position: Point) -> Entity {
+        Entity {
+            id: Uuid::new_v4(),
+            position
+        }
+    } 
 }
