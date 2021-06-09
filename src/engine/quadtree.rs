@@ -1,20 +1,22 @@
-use super::{ Container, Rectangle, Geometry, Entity };
+use std::collections::HashMap;
+
+use super::{ Rectangle, Shape, Point, Rotation };
 
 #[derive(Debug)]
-pub struct QuadTree {
+pub struct QuadTree<T> {
     bounds: Rectangle,
     capacity: usize,
-    entities: Vec<Entity>,
+    entities: HashMap<T, Point>,
 
-    quadrants: Option<Vec<QuadTree>>,
+    quadrants: Option<Vec<QuadTree<T>>>,
 }
 
-impl QuadTree {
-    pub fn new(bounds: Rectangle, capacity: usize) -> QuadTree {
+impl<T: std::hash::Hash + Eq> QuadTree<T> {
+    pub fn new(bounds: Rectangle, capacity: usize) -> QuadTree<T> {
         QuadTree {
             bounds,
             capacity,
-            entities: vec![],
+            entities: HashMap::new(),
             quadrants: None,
         }
     }
@@ -31,7 +33,7 @@ impl QuadTree {
                 vertex.y, 
                 if vertex.x.is_sign_negative() { width } else { -width }, 
                 if vertex.y.is_sign_negative() { height } else { -height}, 
-                0.0)
+                Rotation::new(0.0))
             )
             .collect();
 
@@ -42,10 +44,8 @@ impl QuadTree {
 
         self.quadrants = Some(quadrants);
     }
-}
 
-impl Container for QuadTree {
-    fn query(&self, bounds: &Rectangle) -> Vec<&Entity> {
+    fn query(&self, bounds: &Rectangle) -> Vec<&T> {
         let mut found = vec![];
 
         if !bounds.intersects(&self.bounds) {
@@ -53,8 +53,8 @@ impl Container for QuadTree {
         } else {
             self.entities
                 .iter()
-                .filter(|&entity| bounds.contains(&entity.position))
-                .for_each(|entity| found.push(entity));
+                .filter(|(_, position)| bounds.contains(&position))
+                .for_each(|(entity, _)| found.push(entity));
         }
 
         match &self.quadrants {
@@ -69,13 +69,13 @@ impl Container for QuadTree {
         return found;
     }
 
-    fn insert(&mut self, entity: Entity) {
-        if !self.bounds.contains(&entity.position) {
+    fn insert(&mut self, item: T, position: Point) {
+        if !self.bounds.contains(&position) {
             return;
         }
 
         if self.entities.len() < self.capacity {
-            self.entities.push(entity);
+            self.entities.insert(item, position);
             return;
         }
         
@@ -87,8 +87,8 @@ impl Container for QuadTree {
             Some(quadrants) => 
                 quadrants
                 .iter_mut()
-                .find(|quadrant| quadrant.bounds.contains(&entity.position))
-                .map(|quadrant| quadrant.insert(entity)),
+                .find(|quadrant| quadrant.bounds.contains(&position))
+                .map(|quadrant| quadrant.insert(item, position)),
             _ => unreachable!("Quadrants not initialized!"),
         };
     }
@@ -99,33 +99,43 @@ mod tests {
     use super::*;
     use super::super::*;
 
+    #[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Hash, Eq, Copy)]
+    struct TestItem;
+
     #[test]
     fn insert_items() {
-        let bounds = Rectangle::new(0.0, 0.0, 200.0, 200.0, 0.0);
-        let mut tree: QuadTree = QuadTree::new(bounds, 4);
+        let bounds = Rectangle::new(0.0, 0.0, 200.0, 200.0, Rotation::new(0.0));
+        let mut tree: QuadTree<TestItem> = QuadTree::new(bounds, 4);
 
-        let inside_entites: Vec<Entity> = vec![
+        let inside_entites: Vec<(TestItem, Point)> = vec![
             Point { x: 0.0, y: 0.0, },
             Point { x: 25.3, y: 40.9 },
             Point { x: -54.2, y: -90.5 },
             Point { x: 100.0, y: 100.0 },
             Point { x: -100.0, y: -100.0 },
-        ].iter().map(|&point| Entity::new(point)).collect();
+        ].iter().map(|&point| (TestItem, point)).collect();
 
-        let outside_entities: Vec<Entity> = vec![
+        let outside_entities: Vec<(TestItem, Point)> = vec![
             Point { x: 200.0, y: 200.0 },
-        ].iter().map(|&point| Entity::new(point)).collect();
+        ].iter().map(|&point| (TestItem, point)).collect();
 
         inside_entites
             .iter()
-            .for_each(|&entity| tree.insert(entity));
+            .for_each(|(entity, position)| tree.insert(*entity, *position));
 
         outside_entities
             .iter()
-            .for_each(|&entity| tree.insert(entity));
+            .for_each(|(entity, position)| tree.insert(*entity, *position));
 
-        let actual_results: Vec<Entity> = tree.query(&bounds).iter().map(|&&entity| entity).collect(); // TODO: Sort by points
+        let mut expected_results: Vec<TestItem> = inside_entites
+            .iter()
+            .map(|(entity, _)| *entity)
+            .collect();
+        let mut actual_results: Vec<TestItem> = tree.query(&bounds)
+            .iter()
+            .map(|&&entity| entity)
+            .collect(); // TODO: Sort by points
 
-        assert_eq!(actual_results, inside_entites);
+        assert_eq!(actual_results.sort(), expected_results.sort());
     }
 }

@@ -1,3 +1,5 @@
+use ant_simulator_rust::create_simulation;
+
 fn main() {
-    println!("Hello world");
+    let simulation = create_simulation();
 }

@@ -1,7 +1,12 @@
 mod point;
 mod rectangle;
-mod geometry;
+mod rotation;
 
 pub use point::Point;
 pub use rectangle::Rectangle;
-pub use geometry::Geometry;
+pub use rotation::Rotation;
+
+pub trait Shape<T: Shape<T>> {
+    fn contains(&self, point: &Point) -> bool;
+    fn intersects(&self, range: &T) -> bool;
+}

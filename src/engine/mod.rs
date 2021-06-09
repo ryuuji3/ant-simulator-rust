@@ -1,10 +1,7 @@
-mod container;
-mod world;
-mod entity;
 mod geometry;
+mod quadtree;
+mod world;
 
-use container::*;
-
-pub use geometry::{ Point, Rectangle };
-pub use world::World;
-pub use entity::Entity;
+pub use geometry::*;
+pub use quadtree::*;
+pub use world::*;

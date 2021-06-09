@@ -1,3 +1,5 @@
+use super::Rotation;
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Point {
     pub x: f32,
@@ -34,9 +36,9 @@ impl Point {
         self.x * point.x + self.y * point.y
     }
 
-    pub fn rotate_around_origin(&self, theta: f32) -> Point {
-        let cos = (theta.to_radians()).cos();
-        let sin = (theta.to_radians()).sin();
+    pub fn rotate_around_origin(&self, theta: Rotation) -> Point {
+        let cos = (theta.radians()).cos();
+        let sin = (theta.radians()).sin();
 
         // Result of trig functions will not be exact
         let safe_cos = if (cos).abs() <= 0.01 { 0.0 } else { cos };
